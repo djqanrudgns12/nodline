@@ -1,0 +1,18 @@
+{
+  "name": "subway-simulation-web",
+  "version": "1.0.0",
+  "description": "노드라인 (Nodeline) — 2D 지하철 건설 및 운영 시뮬레이션 게임",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "subway",
+    "simulation",
+    "game",
+    "html5-canvas"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

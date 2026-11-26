@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>노드라인 (Nodeline)</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="description" content="노드라인(Nodeline) — 산과 강 지형 위에 지하철 노선을 구축하고 승객을 수송하는 2D 지하철 운영 시뮬레이션">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Batang:wght@400;700&family=JetBrains+Mono:wght@500;700&family=Jua&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 메인 게임 캔버스 -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- 상단 HUD 명령 바 -->
+  <header class="hud-top">
+    <div class="hud-card clock-card">
+      <svg class="hud-icon-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.75"/>
+        <path d="M10 6V10.25L12.75 12" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span id="timeDisplay" class="font-mono">Day 0 · 00:00</span>
+      <span id="mapExpandBadge" class="badge-map hidden" title="주간 지도 확장률">지도 확장</span>
+      <span id="rushBadge" class="badge-rush hidden">출근 러시</span>
+    </div>
+
+    <div class="hud-card stats-card">
+      <div class="stat-item">
+        <span class="stat-label">수송</span>
+        <span id="passengersDisplay" class="stat-value font-mono">0</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">점수</span>
+        <span id="scoreDisplay" class="stat-value font-mono">0</span>
+      </div>
+    </div>
+
+    <div class="hud-card line-selector-card" title="연결할 호선 선택 (숫자 키 1~9)">
+      <span class="res-label">호선</span>
+      <div id="lineSlotButtons" class="line-slot-group"></div>
+      <span id="resLineCount" class="line-slot-summary font-mono">0/3</span>
+    </div>
+
+    <div class="hud-card resource-card">
+      <div class="resource-badge is-available" id="resBridgeBadge" title="보유 다리 (1일마다 +1 지급)">
+        <svg class="res-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M2 13H18M4 13V8M16 13V8M4 9C6.5 12 13.5 12 16 9M2 16C4.5 15 6.5 17 10 16C13.5 15 15.5 17 18 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="res-label">다리</span>
+        <span id="resBridgeCount" class="res-count font-mono">1</span>
+      </div>
+      <div class="resource-badge is-available" id="resTunnelBadge" title="보유 터널 (2일마다 +1 지급)">
+        <svg class="res-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 16V10C3 6.134 6.134 3 10 3C13.866 3 17 6.134 17 10V16M1.5 16H18.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          <path d="M6.5 16V10.5C6.5 8.567 8.067 7 10 7C11.933 7 13.5 8.567 13.5 10.5V16" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span class="res-label">터널</span>
+        <span id="resTunnelCount" class="res-count font-mono">1</span>
+      </div>
+      <div class="resource-badge is-available" id="resTrainBadge" title="보유 및 운행 열차 수 (객차 보급 시 기존 노선에 열차 +1 투입)">
+        <svg class="res-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <rect x="4" y="3" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M4 8.5H16M7 15L5 17.5M13 15L15 17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="7.5" cy="12" r="1" fill="currentColor"/>
+          <circle cx="12.5" cy="12" r="1" fill="currentColor"/>
+        </svg>
+        <span class="res-label">열차</span>
+        <span id="resTrainCount" class="res-count font-mono">1</span>
+      </div>
+      <div class="resource-badge is-available" id="resCarriageBadge" title="열차당 최대 탑승 인원 (역 최대 30명 : 열차 최대 인원 = 2 : 1 → 15명)">
+        <svg class="res-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <rect x="2.5" y="5.5" width="15" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M7.5 5.5V14.5M12.5 5.5V14.5" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="6" cy="16.5" r="1.2" fill="currentColor"/>
+          <circle cx="14" cy="16.5" r="1.2" fill="currentColor"/>
+        </svg>
+        <span class="res-label">정원</span>
+        <span id="resCarriageCount" class="res-count font-mono">15명</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 좌측 도구 레일 (2열 그룹 정렬) -->
+  <aside class="hud-left">
+    <div class="tool-group">
+      <button id="btnToolLine" class="btn-tool active" title="노선 연결 (L) · 호선 전환 (숫자 1~9)">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 14L9 6L13 11L17 5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="3" cy="14" r="2" fill="currentColor"/>
+          <circle cx="17" cy="5" r="2" fill="currentColor"/>
+        </svg>
+        <span class="tool-hotkey">노선 · L</span>
+      </button>
+      <button id="btnToolDeleteLine" class="btn-tool btn-tool-danger" title="역 삭제 모드 토글 (X) — 클릭한 역만 노선에서 제거 (전체 철거: Delete / 호선 우클릭)">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4.5 6H15.5M7.5 6V4.5C7.5 3.95 7.95 3.5 8.5 3.5H11.5C12.05 3.5 12.5 3.95 12.5 4.5V6M6 6L6.8 15.5C6.85 16.05 7.3 16.5 7.85 16.5H12.15C12.7 16.5 13.15 16.05 13.2 15.5L14 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="tool-hotkey">삭제 · X</span>
+      </button>
+      <button id="btnToolLastStation" class="btn-tool" title="노선별 마지막 연결 역 표시 (W)">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2.5C6.96 2.5 4.5 4.96 4.5 8C4.5 12.25 10 17.5 10 17.5C10 17.5 15.5 12.25 15.5 8C15.5 4.96 13.04 2.5 10 2.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <circle cx="10" cy="8" r="2.2" stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+        <span class="tool-hotkey">종점 · W</span>
+      </button>
+      <button id="btnToolFirstStation" class="btn-tool" title="노선별 첫 역 표시 (E) — 순환선 연결용">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 17V3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M5 4H15L12.5 7.5L15 11H5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        <span class="tool-hotkey">첫 역 · E</span>
+      </button>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <div class="tool-group">
+      <button id="btnToolBridge" class="btn-tool" title="보유 다리 (B) — 강 통과 시 자동 건설">
+        <span id="railBridgeCount" class="tool-count-badge font-mono">1</span>
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M2 13H18M4 13V8M16 13V8M4 9C6.5 12 13.5 12 16 9M2 16C4.5 15 6.5 17 10 16C13.5 15 15.5 17 18 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="tool-hotkey">다리 · B</span>
+      </button>
+      <button id="btnToolTunnel" class="btn-tool" title="보유 터널 (T) — 산 통과 시 자동 건설">
+        <span id="railTunnelCount" class="tool-count-badge font-mono">1</span>
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 16V10C3 6.134 6.134 3 10 3C13.866 3 17 6.134 17 10V16M1.5 16H18.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          <path d="M6.5 16V10.5C6.5 8.567 8.067 7 10 7C11.933 7 13.5 8.567 13.5 10.5V16" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span class="tool-hotkey">터널 · T</span>
+      </button>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <div class="tool-group">
+      <button id="btnUndo" class="btn-tool" title="실행 취소 (U / Ctrl+Z)">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M7.5 6L3.5 10L7.5 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 10H12.5C14.709 10 16.5 11.791 16.5 14V14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="tool-hotkey">취소 · U</span>
+      </button>
+      <button id="btnRedo" class="btn-tool" title="다시 실행 (R / Ctrl+Y)">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M12.5 6L16.5 10L12.5 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 10H7.5C5.291 10 3.5 11.791 3.5 14V14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="tool-hotkey">복구 · R</span>
+      </button>
+      <button id="btnCenterCam" class="btn-tool" title="카메라 중앙 정렬 (C / Home)">
+        <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="5.5" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+          <path d="M10 2.5V4.5M10 15.5V17.5M2.5 10H4.5M15.5 10H17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="tool-hotkey">중앙 · C</span>
+      </button>
+      <button id="btnAudioToggle" class="btn-tool" title="효과음 전환">
+        <svg id="audioSvgOn" class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 8H7L11 4.5V15.5L7 12H4V8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M13.8 7.5C14.7 8.5 14.7 11.5 13.8 12.5M15.8 5.5C17.4 7.5 17.4 12.5 15.8 14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <svg id="audioSvgOff" class="tool-svg hidden" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 8H7L11 4.5V15.5L7 12H4V8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M14 8L18 12M18 8L14 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span id="audioStateLabel" class="tool-hotkey">음향 켜짐</span>
+      </button>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <button id="btnToolHelp" class="btn-tool btn-tool-wide" title="조작법 및 게임 가이드 (H / ?)">
+      <svg class="tool-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M8.2 7.8C8.2 6.8 9 6 10 6C11 6 11.8 6.8 11.8 7.8C11.8 9.2 10 9.2 10 11M10 13.8V14.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span class="tool-hotkey">도움말 · H</span>
+    </button>
+  </aside>
+
+  <!-- 혼잡 단계 경고 알림 배너 (27명 1차 · 28명 2차 · 29명 3차) -->
+  <div id="warningBanner" class="warning-banner hidden" role="status" aria-live="polite">
+    <span id="warningStageTag" class="warning-stage-tag">1차 경고</span>
+    <span id="warningBannerText" class="warning-banner-text">역 대기 인원이 27명에 도달했습니다.</span>
+  </div>
+
+  <!-- 우측 하단 간결한 역 정보 텍스트 -->
+  <section id="inspectorPanel" class="station-info-bottom-right hidden" aria-live="polite">
+    <div id="inspectLinePrimary" class="station-info-primary">역 01 (원형) · 대기 0/30명 · 정상</div>
+    <div id="inspectLineSecondary" class="station-info-secondary">경유 노선: 없음</div>
+  </section>
+
+  <!-- 하단 상태 바 (이벤트 피드 + 배속 제어 + 줌) -->
+  <footer class="hud-bottom">
+    <div class="event-feed-card">
+      <span class="live-dot"></span>
+      <span id="eventLogText" class="event-text">역을 클릭해 노선을 연결하세요. 숫자 키(1~3)로 호선을 전환할 수 있습니다.</span>
+    </div>
+    <div class="hud-bottom-right">
+      <div class="hud-card speed-card" title="배속 설정: Shift+(1~9: 1~9배속, 0: 10배속) 또는 Q+숫자">
+        <button id="btnPause" class="btn-pill" title="일시정지 (Space)" aria-label="일시정지">
+          <svg class="speed-svg" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="3.5" y="3" width="3" height="10" rx="0.8" fill="currentColor"/>
+            <rect x="9.5" y="3" width="3" height="10" rx="0.8" fill="currentColor"/>
+          </svg>
+        </button>
+        <button id="btnSpeed1" class="btn-pill active" title="1배속 (Shift+1)">1x</button>
+        <button id="btnSpeed2" class="btn-pill" title="2배속 (Shift+2)">2x</button>
+        <button id="btnSpeed4" class="btn-pill" title="4배속 (Shift+4)">4x</button>
+        <button id="btnSpeedCustom" class="btn-pill hidden font-mono" title="현재 배속 (Shift+숫자로 1~10배속 설정)">10x</button>
+      </div>
+      <div class="zoom-indicator font-mono" id="zoomLevelDisplay">95%</div>
+    </div>
+  </footer>
+
+  <!-- 플로팅 토스트 안내 -->
+  <div id="toastMessage" class="toast-pill hidden"></div>
+
+  <!-- 노선 연결 안내 배너 -->
+  <div id="connectingBanner" class="connecting-banner hidden">
+    <span id="connectingBannerDot" class="banner-line-dot"></span>
+    <span id="connectingBannerText">1호선 연결 중 — 목표 역 클릭 · 숫자 키로 호선 변경 · ESC 취소</span>
+    <button id="btnCancelConnect" class="btn-banner-cancel">취소</button>
+  </div>
+
+  <!-- 시작 조작법 및 게임 가이드 모달 -->
+  <div id="controlsGuideModal" class="modal-overlay">
+    <div class="modal-card modal-card-guide" role="dialog" aria-labelledby="controlsGuideTitle">
+      <div class="modal-header-row">
+        <div class="modal-badge-info">게임 가이드</div>
+        <button id="btnCloseControlsGuideX" class="btn-icon-close" title="닫기 (ESC)" aria-label="닫기">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <h1 id="controlsGuideTitle" class="modal-title">노드라인 (Nodeline) 조작법</h1>
+      <p class="modal-desc">미니멀 지하철 네트워크를 건설하고 승객을 원활히 수송하세요.</p>
+
+      <div class="guide-grid">
+        <!-- 1. 마우스 조작 -->
+        <div class="guide-box">
+          <div class="guide-box-header">
+            <svg class="guide-icon-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="5" y="3" width="10" height="14" rx="5" stroke="currentColor" stroke-width="1.8"/>
+              <line x1="10" y1="5.5" x2="10" y2="8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span class="guide-box-title">마우스 조작</span>
+          </div>
+          <ul class="guide-list">
+            <li><span class="guide-key">좌클릭</span><span>역 클릭 후 다른 역 클릭(또는 드래그)하여 노선 연결</span></li>
+            <li><span class="guide-key">우클릭 / 드래그</span><span>빈 공간 드래그로 지도 화면 이동</span></li>
+            <li><span class="guide-key">휠 스크롤</span><span>카메라 줌 인 / 줌 아웃 (40% ~ 280%)</span></li>
+            <li><span class="guide-key">우클릭 / ESC</span><span>노선 연결 작업 즉시 취소</span></li>
+          </ul>
+        </div>
+
+        <!-- 2. 단축키 조작 -->
+        <div class="guide-box">
+          <div class="guide-box-header">
+            <svg class="guide-icon-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="2.5" y="4.5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/>
+              <line x1="5.5" y1="8" x2="6.5" y2="8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="9.5" y1="8" x2="10.5" y2="8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="13.5" y1="8" x2="14.5" y2="8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span class="guide-box-title">단축키 안내</span>
+          </div>
+          <ul class="guide-list">
+            <li><span class="guide-key">Space</span><span>일시정지 / 운행 재개 토글</span></li>
+            <li><span class="guide-key">Shift + 1~9, 0</span><span>시뮬레이션 배속 설정 (1~9배속, 0은 10배속 · Q+숫자도 지원)</span></li>
+            <li><span class="guide-key">1 ~ 9</span><span>연결할 호선 슬롯(1~9호선) 직접 전환</span></li>
+            <li><span class="guide-key">W · E</span><span>노선별 종점(W) / 첫 역(E) 하이라이트 토글</span></li>
+            <li><span class="guide-key">X · Delete</span><span>역 삭제 모드(X, 클릭한 역만 제거) · 호선 전체 철거(Delete)</span></li>
+            <li><span class="guide-key">C · Home</span><span>중앙 정렬</span> · <span class="guide-key">U · R</span><span>실행 취소/복구</span></li>
+          </ul>
+        </div>
+
+        <!-- 3. 핵심 규칙 & 팁 -->
+        <div class="guide-box guide-box-full">
+          <div class="guide-box-header">
+            <svg class="guide-icon-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 2.5L12.3 7.2L17.5 7.9L13.7 11.6L14.6 16.8L10 14.4L5.4 16.8L6.3 11.6L2.5 7.9L7.7 7.2L10 2.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+            <span class="guide-box-title">핵심 규칙 & 힐링 팁</span>
+          </div>
+          <div class="guide-rules-grid">
+            <div class="guide-rule-item">
+              <strong>역 30명 한도 & 2:1 정원</strong>
+              <span>대기 승객 30명 도달 시 1초 유예 후 게임오버(27·28·29명 경고). 열차 정원은 15명(2:1)입니다.</span>
+            </div>
+            <div class="guide-rule-item">
+              <strong>다리 & 터널 인프라</strong>
+              <span>강 통과 시 다리, 산 통과 시 터널 자동 건설. 다리 1일, 터널 2일마다 +1개 정기 지급.</span>
+            </div>
+            <div class="guide-rule-item">
+              <strong>주간 맵 확장 & 5종 보급</strong>
+              <span>7일마다 도시가 1/6 확장되며, 호선·객차·역·다리·터널 중 1종을 선택 보급받습니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="font-picker-box">
+        <div class="font-picker-header">
+          <span class="guide-box-title">글씨체 선택</span>
+          <span class="font-picker-hint">클릭하면 즉시 적용됩니다 (도움말 H로 언제든 변경 가능)</span>
+        </div>
+        <div id="fontPickerGrid" class="font-picker-grid">
+          <button type="button" class="font-option" data-font="jua" style="font-family: 'Jua', sans-serif;">
+            <span class="font-opt-name">주아체</span>
+            <span class="font-opt-tag">뭉툭 · 통통</span>
+          </button>
+          <button type="button" class="font-option" data-font="dohyeon" style="font-family: 'Do Hyeon', sans-serif;">
+            <span class="font-opt-name">도현체</span>
+            <span class="font-opt-tag">각짐 · 직선</span>
+          </button>
+          <button type="button" class="font-option" data-font="galmuri" style="font-family: 'Galmuri11', monospace;">
+            <span class="font-opt-name">갈무리11</span>
+            <span class="font-opt-tag">도트 · 전광판</span>
+          </button>
+          <button type="button" class="font-option" data-font="batang" style="font-family: 'Gowun Batang', serif;">
+            <span class="font-opt-name">고운바탕</span>
+            <span class="font-opt-tag">클래식 · 명조</span>
+          </button>
+          <button type="button" class="font-option active" data-font="pretendard" style="font-family: 'Pretendard', sans-serif;">
+            <span class="font-opt-name">프리텐다드</span>
+            <span class="font-opt-tag">깔끔 · 기본</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer-row">
+        <button id="btnCloseControlsGuide" class="btn-modal-primary">시작하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 주간 보급 선택 모달 (1주일마다 5종 중 택 1) -->
+  <div id="weeklyRewardModal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-wide">
+      <div id="weeklyRewardBadge" class="modal-badge-info">제 1주차 도시 보급</div>
+      <h1 class="modal-title">주간 인프라 확충</h1>
+      <p id="weeklyRewardDesc" class="modal-desc">도시 구역이 1/6 확장되었습니다. 추가할 자원을 1가지 선택하세요.</p>
+
+      <div class="reward-grid">
+        <button class="reward-option" data-reward="line">
+          <svg class="reward-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 17L10 8L15 14L20 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="4" cy="17" r="2.2" fill="currentColor"/>
+            <circle cx="20" cy="6" r="2.2" fill="currentColor"/>
+          </svg>
+          <span class="reward-name">호선 추가</span>
+          <span class="reward-sub font-mono">노선 슬롯 +1</span>
+        </button>
+
+        <button class="reward-option" data-reward="carriage">
+          <svg class="reward-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="7" width="18" height="10" rx="2.2" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 7V17M15 7V17" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="7" cy="19" r="1.4" fill="currentColor"/>
+            <circle cx="17" cy="19" r="1.4" fill="currentColor"/>
+          </svg>
+          <span class="reward-name">객차 추가</span>
+          <span class="reward-sub font-mono">노선 열차 +1 (정원 15명)</span>
+        </button>
+
+        <button class="reward-option" data-reward="station">
+          <svg class="reward-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="2.1"/>
+            <path d="M12 9V15M9 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="reward-name">역 추가</span>
+          <span class="reward-sub font-mono">신규 역 +1</span>
+        </button>
+
+        <button class="reward-option" data-reward="bridge">
+          <svg class="reward-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M2.5 15H21.5M5 15V9M19 15V9M5 10C8 13.5 16 13.5 19 10M2.5 18.5C5.5 17.5 8 19.5 12 18.5C16 17.5 18.5 19.5 21.5 18.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="reward-name">다리 추가</span>
+          <span class="reward-sub font-mono">보유 다리 +1</span>
+        </button>
+
+        <button class="reward-option" data-reward="tunnel">
+          <svg class="reward-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 19V11.5C4 7.082 7.582 3.5 12 3.5C16.418 3.5 20 7.082 20 11.5V19M2 19H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8 19V12C8 9.791 9.791 8 12 8C14.209 8 16 9.791 16 12V19" stroke="currentColor" stroke-width="1.6"/>
+          </svg>
+          <span class="reward-name">터널 추가</span>
+          <span class="reward-sub font-mono">보유 터널 +1</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임오버 모달 -->
+  <div id="gameOverModal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-gameover">
+      <div class="modal-badge-danger">운행 중단</div>
+      <h1 class="modal-title">게임 종료</h1>
+      <p id="gameOverReason" class="modal-desc">역 대기 인원이 한도(30명)에 도달하여 운행이 중단되었습니다.</p>
+
+      <div class="modal-stats-grid">
+        <div class="modal-stat-box">
+          <span class="stat-num font-mono" id="goTotalScore">0</span>
+          <span class="stat-desc">최종 점수</span>
+        </div>
+        <div class="modal-stat-box">
+          <span class="stat-num font-mono" id="goPassengers">0</span>
+          <span class="stat-desc">수송 승객</span>
+        </div>
+        <div class="modal-stat-box">
+          <span class="stat-num font-mono" id="goDays">1일</span>
+          <span class="stat-desc">생존 일수</span>
+        </div>
+        <div class="modal-stat-box">
+          <span class="stat-num font-mono" id="goLines">0개</span>
+          <span class="stat-desc">개통 노선</span>
+        </div>
+      </div>
+
+      <button id="btnRestartGame" class="btn-modal-primary">새 게임 시작</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

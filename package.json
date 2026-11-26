@@ -1,0 +1,10 @@
+{
+  "name": "subway-simulation",
+  "version": "1.0.0",
+  "description": "노드라인 (Nodeline) — 2D 지하철 건설 시뮬레이션 게임",
+  "scripts": {
+    "dev": "node web/server.js",
+    "start": "node web/server.js"
+  },
+  "license": "MIT"
+}

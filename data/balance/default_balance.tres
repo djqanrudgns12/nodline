@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="GameBalanceConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/balance/game_balance_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_lines_per_station = 5
+max_passengers_per_station = 15
+station_warning_threshold = 12
+station_danger_threshold = 14
+max_station_count = 20
+initial_station_count = 3
+max_passengers_per_carriage = 5
+max_carriages_per_train = 3
+initial_trains = 1
+initial_carriages = 1
+train_base_speed_px_per_sec = 120.0
+initial_lines = 1
+line_crossing_speed_multiplier = 0.6
+line_crossing_radius_px = 24.0
+initial_bridges = 1
+initial_tunnels = 1
+day_duration_real_seconds = 120.0
+new_station_spawn_interval_hours = 24.0
+station_base_spawn_interval_hours = 24.0
+station_bonus_spawn_interval_hours = 12.0
+station_bonus_spawn_chance = 0.25
+map_expansion_interval_days = 7.0
+map_expansion_rate = 0.10
+max_infrastructure_requirement_per_station = 1
+grace_period_seconds = 30.0
+score_per_arrived_passenger = 10
+score_per_survived_day = 50
+spawn_rate_early_morning = 0.55
+spawn_rate_rush_morning = 1.8
+spawn_rate_morning = 1.1
+spawn_rate_afternoon = 0.9
+spawn_rate_rush_evening = 2.1
+spawn_rate_evening = 1.2
+spawn_rate_night = 0.4
+station_color_blue = Color(0.113725, 0.321569, 0.6, 1)
+station_color_coral = Color(0.847059, 0.262745, 0.082353, 1)
+station_color_emerald = Color(0.180392, 0.490196, 0.196078, 1)
+ui_bg = Color(0.972549, 0.964706, 0.941176, 1)
+ui_panel = Color(1, 1, 1, 1)
+ui_panel_accent = Color(0.945098, 0.937255, 0.909804, 1)
+ui_text_primary = Color(0.109804, 0.12549, 0.141176, 1)
+ui_text_secondary = Color(0.341176, 0.376471, 0.415686, 1)
+ui_border = Color(0.815686, 0.843137, 0.870588, 1)
+ui_button_primary = Color(0.113725, 0.321569, 0.6, 1)
+ui_warning = Color(0.85098, 0.466667, 0.023529, 1)
+ui_success = Color(0.086275, 0.639216, 0.290196, 1)
+ui_danger = Color(0.862745, 0.14902, 0.14902, 1)
+min_station_distance_px = 150.0
+play_area_width = 1600.0
+play_area_height = 900.0
+play_area_margin = 100.0

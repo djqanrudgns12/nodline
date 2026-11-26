@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>글씨체 5종 스타일별 비교 — 지하철 건설 시뮬레이터</title>
+  <!-- Google Fonts: 주아(뭉툭), 도현(각짐), 고운바탕(명조) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Batang:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+  <!-- 갈무리(도트/전광판) & 프리텐다드(모던 고딕) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F8F6F0;
+      color: #181C20;
+      font-family: 'Pretendard', sans-serif;
+      padding: 28px 24px 48px;
+      line-height: 1.5;
+    }
+    .page-header {
+      max-width: 1120px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #D2D8E0;
+      padding-bottom: 16px;
+    }
+    .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+    .page-sub { font-size: 13px; color: #525B65; margin-top: 4px; }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: #15529E;
+      color: #FFFFFF;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .back-link:hover { background: #103F7A; }
+
+    .grid {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+      gap: 18px;
+    }
+    .font-card {
+      background: #FFFFFF;
+      border: 1px solid #D2D8E0;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(24, 28, 32, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #EEF1F4;
+      padding-bottom: 10px;
+    }
+    .font-name { font-size: 19px; font-weight: 700; color: #15529E; }
+    .font-tag {
+      font-size: 11.5px;
+      font-weight: 700;
+      background: #EEF4FC;
+      color: #15529E;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-family: 'Pretendard', sans-serif;
+    }
+    .sample-title { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+    .sample-desc { font-size: 14px; color: #525B65; }
+
+    .hud-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      background: #F4F5F7;
+      border: 1px solid #D2D8E0;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .pill-blue {
+      background: #15529E;
+      color: #FFF;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .canvas-mock {
+      background: #F8F6F0;
+      border: 1px dashed #AAB4C0;
+      border-radius: 9px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .station-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #FFFFFF;
+      border: 2px solid #E03131;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .dot-red { width: 8px; height: 8px; border-radius: 50%; background: #E03131; }
+    .dot-blue { width: 8px; height: 8px; border-radius: 50%; background: #15529E; }
+    .station-badge.blue { border-color: #15529E; }
+    .station-label { font-size: 12.5px; font-weight: 700; color: #181C20; }
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 7px;
+      background: #FFFFFF;
+      border: 1px solid #D2D8E0;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #525B65;
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">지하철 건설 시뮬레이터 — 스타일별 글씨체 5종 비교</h1>
+      <p class="page-sub">뭉툭한 느낌, 각진 느낌, 전광판 도트, 클래식 명조, 깔끔한 고딕까지 확연히 다른 5가지 스타일입니다.</p>
+    </div>
+    <a class="back-link" href="./">← 게임으로 돌아가기</a>
+  </header>
+
+  <main class="grid">
+    <!-- 1. Jua (뭉툭·둥근 느낌) -->
+    <section class="font-card" style="font-family: 'Jua', sans-serif;">
+      <div class="card-top">
+        <span class="font-name">1. 주아체 (Jua)</span>
+        <span class="font-tag">뭉툭 · 통통 · 아기자기</span>
+      </div>
+      <div class="sample-title">노르딕 지하철 시뮬레이터</div>
+      <p class="sample-desc">강 통과 시 다리, 산 통과 시 터널이 자동 건설됩니다. 역 대기 인원이 30명에 도달하면 게임이 종료됩니다.</p>
+      <div class="hud-strip">
+        <span class="pill-blue">1호선</span>
+        <span>Day 3 · 08:30</span>
+        <span>수송 124명</span>
+        <span>정원 15명 · 한도 30명</span>
+      </div>
+      <div class="canvas-mock">
+        <span class="station-badge"><span class="dot-red"></span>1호선 첫 역</span>
+        <span class="station-badge blue"><span class="dot-blue"></span>2호선 마지막 역</span>
+        <span class="station-label">역 04 (삼각)</span>
+        <span class="tool-chip">첫 역 · E</span>
+      </div>
+    </section>
+
+    <!-- 2. Do Hyeon (각지고 굵은 느낌) -->
+    <section class="font-card" style="font-family: 'Do Hyeon', sans-serif;">
+      <div class="card-top">
+        <span class="font-name">2. 도현체 (Do Hyeon)</span>
+        <span class="font-tag">각짐 · 직선적 · 힘있는 간판</span>
+      </div>
+      <div class="sample-title">노르딕 지하철 시뮬레이터</div>
+      <p class="sample-desc">강 통과 시 다리, 산 통과 시 터널이 자동 건설됩니다. 역 대기 인원이 30명에 도달하면 게임이 종료됩니다.</p>
+      <div class="hud-strip">
+        <span class="pill-blue">1호선</span>
+        <span>Day 3 · 08:30</span>
+        <span>수송 124명</span>
+        <span>정원 15명 · 한도 30명</span>
+      </div>
+      <div class="canvas-mock">
+        <span class="station-badge"><span class="dot-red"></span>1호선 첫 역</span>
+        <span class="station-badge blue"><span class="dot-blue"></span>2호선 마지막 역</span>
+        <span class="station-label">역 04 (삼각)</span>
+        <span class="tool-chip">첫 역 · E</span>
+      </div>
+    </section>
+
+    <!-- 3. Galmuri11 (레트로 픽셀·전광판 느낌) -->
+    <section class="font-card" style="font-family: 'Galmuri11', monospace;">
+      <div class="card-top">
+        <span class="font-name">3. 갈무리11 (Galmuri11)</span>
+        <span class="font-tag">픽셀 · 지하철 전광판 감성</span>
+      </div>
+      <div class="sample-title">노르딕 지하철 시뮬레이터</div>
+      <p class="sample-desc">강 통과 시 다리, 산 통과 시 터널이 자동 건설됩니다. 역 대기 인원이 30명에 도달하면 게임이 종료됩니다.</p>
+      <div class="hud-strip">
+        <span class="pill-blue">1호선</span>
+        <span>Day 3 · 08:30</span>
+        <span>수송 124명</span>
+        <span>정원 15명 · 한도 30명</span>
+      </div>
+      <div class="canvas-mock">
+        <span class="station-badge"><span class="dot-red"></span>1호선 첫 역</span>
+        <span class="station-badge blue"><span class="dot-blue"></span>2호선 마지막 역</span>
+        <span class="station-label">역 04 (삼각)</span>
+        <span class="tool-chip">첫 역 · E</span>
+      </div>
+    </section>
+
+    <!-- 4. Gowun Batang (클래식 명조·종이 지도) -->
+    <section class="font-card" style="font-family: 'Gowun Batang', serif;">
+      <div class="card-top">
+        <span class="font-name">4. 고운바탕 (Gowun Batang)</span>
+        <span class="font-tag">명조체 · 클래식 종이 지도</span>
+      </div>
+      <div class="sample-title">노르딕 지하철 시뮬레이터</div>
+      <p class="sample-desc">강 통과 시 다리, 산 통과 시 터널이 자동 건설됩니다. 역 대기 인원이 30명에 도달하면 게임이 종료됩니다.</p>
+      <div class="hud-strip">
+        <span class="pill-blue">1호선</span>
+        <span>Day 3 · 08:30</span>
+        <span>수송 124명</span>
+        <span>정원 15명 · 한도 30명</span>
+      </div>
+      <div class="canvas-mock">
+        <span class="station-badge"><span class="dot-red"></span>1호선 첫 역</span>
+        <span class="station-badge blue"><span class="dot-blue"></span>2호선 마지막 역</span>
+        <span class="station-label">역 04 (삼각)</span>
+        <span class="tool-chip">첫 역 · E</span>
+      </div>
+    </section>
+
+    <!-- 5. Pretendard (깔끔·모던 표준) -->
+    <section class="font-card" style="font-family: 'Pretendard', sans-serif;">
+      <div class="card-top">
+        <span class="font-name">5. 프리텐다드 (Pretendard)</span>
+        <span class="font-tag">깔끔 · 모던 표준 고딕</span>
+      </div>
+      <div class="sample-title">노르딕 지하철 시뮬레이터</div>
+      <p class="sample-desc">강 통과 시 다리, 산 통과 시 터널이 자동 건설됩니다. 역 대기 인원이 30명에 도달하면 게임이 종료됩니다.</p>
+      <div class="hud-strip">
+        <span class="pill-blue">1호선</span>
+        <span>Day 3 · 08:30</span>
+        <span>수송 124명</span>
+        <span>정원 15명 · 한도 30명</span>
+      </div>
+      <div class="canvas-mock">
+        <span class="station-badge"><span class="dot-red"></span>1호선 첫 역</span>
+        <span class="station-badge blue"><span class="dot-blue"></span>2호선 마지막 역</span>
+        <span class="station-label">역 04 (삼각)</span>
+        <span class="tool-chip">첫 역 · E</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
