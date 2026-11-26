@@ -35,6 +35,8 @@ jobs:
           if [ -f web/favicon.ico ]; then cp web/favicon.ico _site/; fi
           if [ -f web/manifest.webmanifest ]; then cp web/manifest.webmanifest _site/; fi
           if [ -d web/icons ]; then cp -r web/icons _site/; fi
+          sed -i "s|href=\"style.css\"|href=\"style.css?v=${GITHUB_SHA::7}\"|g" _site/index.html
+          sed -i "s|src=\"game.js\"|src=\"game.js?v=${GITHUB_SHA::7}\"|g" _site/index.html
           touch _site/.nojekyll
 
       - name: Setup Pages

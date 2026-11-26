@@ -306,6 +306,7 @@
       this.isPaused = false;
       this.isGameOver = false;
       this.isRewardModalOpen = false;
+      this.hasGameStarted = false;     // '시작하기' 버튼 클릭 전까지 타이머 정지
       this.isControlsGuideOpen = true; // 최초 접속 시 조작법 가이드 모달 표시
       this.pendingWeeklyRewards = 0;
 
@@ -1818,7 +1819,7 @@
     // 7. 시뮬레이션 루프 (1일=60초, 24h 즉시 날짜 변경, 2일 보급, 주간 1/6 확장)
     // ==========================================================================
     update(dt) {
-      if (this.isPaused || this.isGameOver || this.isRewardModalOpen) return;
+      if (!this.hasGameStarted || this.isPaused || this.isGameOver || this.isRewardModalOpen || this.isControlsGuideOpen) return;
 
       const gameDelta = dt * this.speed;
       this.simTime += gameDelta * (86400 / CONFIG.simulation.dayDurationRealSec);
@@ -3497,6 +3498,10 @@
       // 키보드 단축키: Ctrl/Q+(숫자) 1~10 배속 설정 및 단독 숫자 1~9 호선 지정
       window.addEventListener('keydown', (e) => {
         if (this.isControlsGuideOpen) {
+          // 최초 실행 시에는 '시작하기' 버튼을 눌러야 게임 및 타이머가 시작됨
+          if (!this.hasGameStarted) {
+            return;
+          }
           if (e.key === 'Control' || e.key === 'Shift' || e.key === 'Alt' || e.key === 'Meta') {
             return;
           }
@@ -3704,19 +3709,22 @@
 
       const btnCloseGuide = document.getElementById('btnCloseControlsGuide');
       if (btnCloseGuide) {
-        btnCloseGuide.onclick = () => this.closeControlsGuide();
+        btnCloseGuide.onclick = () => this.closeControlsGuide(true);
       }
 
       const btnCloseGuideX = document.getElementById('btnCloseControlsGuideX');
       if (btnCloseGuideX) {
-        btnCloseGuideX.onclick = () => this.closeControlsGuide();
+        if (!this.hasGameStarted) {
+          btnCloseGuideX.classList.add('hidden');
+        }
+        btnCloseGuideX.onclick = () => this.closeControlsGuide(false);
       }
 
       const guideModal = document.getElementById('controlsGuideModal');
       if (guideModal) {
         guideModal.onclick = (e) => {
-          if (e.target === guideModal) {
-            this.closeControlsGuide();
+          if (e.target === guideModal && this.hasGameStarted) {
+            this.closeControlsGuide(false);
           }
         };
       }
@@ -3811,11 +3819,24 @@
       if (modal) modal.classList.remove('hidden');
     }
 
-    closeControlsGuide() {
+    closeControlsGuide(fromStartButton = false) {
+      if (!this.hasGameStarted && !fromStartButton) return;
+
+      const isFirstStart = !this.hasGameStarted;
+      this.hasGameStarted = true;
       this.isControlsGuideOpen = false;
+
       const modal = document.getElementById('controlsGuideModal');
       if (modal) modal.classList.add('hidden');
-      this.showToast('운행이 시작되었습니다. 언제든 좌측 도움말(H)로 확인할 수 있습니다.');
+
+      if (isFirstStart) {
+        const btnCloseGuideX = document.getElementById('btnCloseControlsGuideX');
+        if (btnCloseGuideX) btnCloseGuideX.classList.remove('hidden');
+        const btnCloseGuide = document.getElementById('btnCloseControlsGuide');
+        if (btnCloseGuide) btnCloseGuide.textContent = '계속하기';
+        this.sfx.play('click');
+        this.showToast('운행이 시작되었습니다. 언제든 좌측 도움말(H)로 확인할 수 있습니다.');
+      }
     }
 
     toggleControlsGuide() {
