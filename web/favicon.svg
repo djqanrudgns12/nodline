@@ -1,9 +1,74 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <rect width="128" height="128" rx="16" fill="#101318"/>
-  <circle cx="40" cy="50" r="12" fill="#3B82F6" stroke="#E8EDF3" stroke-width="2"/>
-  <polygon points="88,38 100,62 76,62" fill="#06B6D4" stroke="#E8EDF3" stroke-width="2"/>
-  <rect x="52" y="76" width="24" height="24" fill="#A855F7" stroke="#E8EDF3" stroke-width="2"/>
-  <line x1="40" y1="50" x2="88" y2="50" stroke="#E06161" stroke-width="3" stroke-linecap="round"/>
-  <line x1="88" y1="50" x2="64" y2="88" stroke="#4DBA86" stroke-width="3" stroke-linecap="round"/>
-  <rect x="58" y="46" width="12" height="8" rx="2" fill="#E06161" stroke="#E8EDF3" stroke-width="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#E2DDD3" stroke-width="1.5"/>
+    </pattern>
+    <clipPath id="canvasClip">
+      <rect width="512" height="512"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#canvasClip)">
+    <!-- Warm ivory paper canvas + architectural grid -->
+    <rect width="512" height="512" fill="#F8F6F0"/>
+    <rect width="512" height="512" fill="url(#grid)"/>
+
+    <!-- Flat sage-gray mountain polygon (top-left) -->
+    <polygon
+      points="46,66 128,24 206,42 246,88 202,118 160,164 48,186 20,128"
+      fill="#DCE3DB"
+      stroke="#9DB09B"
+      stroke-width="3.5"
+      stroke-linejoin="round"/>
+
+    <!-- Flat Scandinavian powder-blue diagonal river -->
+    <path
+      d="M -24,398 C 110,398 186,304 268,186 C 336,90 426,38 536,24 L 536,-18 C 402,-2 302,60 226,166 C 148,274 84,352 -24,352 Z"
+      fill="#A2C5DC"
+      stroke="#5A8AA8"
+      stroke-width="4"
+      stroke-linejoin="round"/>
+
+    <!-- Subway Line 1 (Cobalt Blue) horizontal across river -->
+    <line x1="78" y1="256" x2="434" y2="256" stroke="#15529E" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- Subway Line 2 (Coral Red) diagonal from Square to Triangle -->
+    <line x1="256" y1="446" x2="434" y2="256" stroke="#D84315" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- Bridge Marker on Line 1 over River -->
+    <g>
+      <rect x="224" y="242" width="64" height="28" rx="3" fill="#FFFFFF" stroke="#15529E" stroke-width="4"/>
+      <line x1="224" y1="256" x2="288" y2="256" stroke="#15529E" stroke-width="4"/>
+    </g>
+
+    <!-- Minimalist 2D Metro Train Car on Coral Line (rotated along segment) -->
+    <g transform="translate(340, 356) rotate(-46.8)">
+      <!-- Subtle wheels -->
+      <rect x="-32" y="18" width="14" height="6" rx="2.5" fill="#1F2937"/>
+      <rect x="18" y="18" width="14" height="6" rx="2.5" fill="#1F2937"/>
+      <!-- White car body -->
+      <rect x="-52" y="-22" width="104" height="44" rx="5" fill="#FFFFFF" stroke="#1F2937" stroke-width="5.5"/>
+      <!-- Coral top stripe -->
+      <path d="M -49,-19 L 49,-19 L 49,-7 L -49,-7 Z" fill="#D84315"/>
+      <line x1="-50" y1="-7" x2="50" y2="-7" stroke="#1F2937" stroke-width="3.5"/>
+    </g>
+
+    <!-- Station 1: Cobalt Blue Circle + dark slate outline + white center dot -->
+    <g>
+      <circle cx="78" cy="256" r="42" fill="#1D5299" stroke="#1E293B" stroke-width="8"/>
+      <circle cx="78" cy="256" r="8.5" fill="#FFFFFF"/>
+    </g>
+
+    <!-- Station 2: Coral Red Triangle + dark slate outline + white center dot -->
+    <g>
+      <polygon points="434,208 480,288 388,288" fill="#D84315" stroke="#1E293B" stroke-width="8" stroke-linejoin="round"/>
+      <circle cx="434" cy="260" r="8" fill="#FFFFFF"/>
+    </g>
+
+    <!-- Station 3: Forest Emerald Square + dark slate outline + white center dot -->
+    <g>
+      <rect x="220" y="410" width="72" height="72" rx="3" fill="#2E7D32" stroke="#1E293B" stroke-width="8" stroke-linejoin="round"/>
+      <circle cx="256" cy="446" r="8.5" fill="#FFFFFF"/>
+    </g>
+  </g>
 </svg>

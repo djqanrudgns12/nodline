@@ -1,5 +1,7 @@
 # 노드라인 (Nodeline) — 마스터 PRD 및 개발 에이전트 통합 명세서 (v3.1)
 
+> **앱 이름 / 버전**: **노드라인 (Nodeline)** `v1.0.0`  
+> **앱 아이콘**: 2-B 실제 인게임 도면+열차 시안 (`icon.ico`, `icon.svg`, `icon.png`, `assets/icons/`, `web/icons/`, `web/favicon.ico`, `web/favicon.svg`, `web/manifest.webmanifest`)  
 > **문서 목적**: 초보 바이브코더가 개발 에이전트/아키텍트에게 그대로 전달하여 추측 없이 즉시 구현하고 검증할 수 있는 최종 통합 마스터 명세서  
 > **대상 플랫폼**: Windows x64 (단일 EXE) & Web HTML5 Canvas (Localhost 웹 브라우저 플레이 지원)  
 > **최종 배포 목표**: Windows 단일 실행 파일 (`SubwayGame.exe`) 및 웹 로컬호스트 서비스 (`http://localhost:3000`)  

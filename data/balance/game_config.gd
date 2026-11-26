@@ -2,6 +2,9 @@
 ## GameBalanceConfig 리소스를 로드하여 전역에서 접근 가능하게 한다.
 extends Node
 
+const APP_NAME := "노드라인 (Nodeline)"
+const APP_VERSION := "1.0.0"
+
 var balance: GameBalanceConfig
 
 

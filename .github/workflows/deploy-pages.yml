@@ -32,6 +32,9 @@ jobs:
           cp web/style.css _site/
           cp web/fonts-preview.html _site/
           if [ -f web/favicon.svg ]; then cp web/favicon.svg _site/; fi
+          if [ -f web/favicon.ico ]; then cp web/favicon.ico _site/; fi
+          if [ -f web/manifest.webmanifest ]; then cp web/manifest.webmanifest _site/; fi
+          if [ -d web/icons ]; then cp -r web/icons _site/; fi
           touch _site/.nojekyll
 
       - name: Setup Pages

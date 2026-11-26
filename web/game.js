@@ -1,5 +1,5 @@
 /**
- * 지하철 건설 시뮬레이터 — 노르딕 아키텍처 라이트
+ * 노드라인 (Nodeline) v1.0.0 — 노르딕 아키텍처 라이트
  * HTML5 Canvas 시뮬레이션 엔진
  */
 
@@ -9,7 +9,15 @@
   // ==========================================================================
   // 1. 설정 상수 (Game Config)
   // ==========================================================================
+  const APP_NAME = '노드라인 (Nodeline)';
+  const APP_VERSION = '1.0.0';
+  window.NODELINE_VERSION = APP_VERSION;
+
   const CONFIG = {
+    app: {
+      name: APP_NAME,
+      version: APP_VERSION
+    },
     grid: {
       cellSizePx: 64,       // 그리드 1칸 한 변 픽셀 = 1m (1m × 1m 격자)
       cellSideMeters: 1     // 1칸 한 변 = 1m

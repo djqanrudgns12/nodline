@@ -37,6 +37,9 @@ var _drag_distance: float = 0.0
 
 
 func _ready() -> void:
+	if get_window() != null:
+		get_window().title = "%s v%s" % [GameConfig.APP_NAME, GameConfig.APP_VERSION]
+	
 	game_manager = GameManager.new()
 	
 	# 이벤트 구독

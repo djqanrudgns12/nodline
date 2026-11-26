@@ -11,7 +11,7 @@ const AUTOSAVE_FILE := "autosave.json"
 const BACKUP_SUFFIX := ".backup"
 const MAX_MANUAL_SLOTS := 3
 const CURRENT_SCHEMA_VERSION := 1
-const GAME_VERSION := "0.1.0"
+const GAME_VERSION := "1.0.0"
 
 var _game_state: GameStateRepository
 var _serializer: SaveSerializer

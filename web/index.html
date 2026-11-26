@@ -3,8 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>노드라인 (Nodeline)</title>
+  <title>노드라인 (Nodeline) v1.0.0</title>
+  <meta name="application-name" content="노드라인 (Nodeline)">
+  <meta name="version" content="1.0.0">
+  <meta name="theme-color" content="#F8F6F0">
+  <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48x48.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <meta name="description" content="노드라인(Nodeline) — 산과 강 지형 위에 지하철 노선을 구축하고 승객을 수송하는 2D 지하철 운영 시뮬레이션">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -237,7 +246,11 @@
   <div id="controlsGuideModal" class="modal-overlay">
     <div class="modal-card modal-card-guide" role="dialog" aria-labelledby="controlsGuideTitle">
       <div class="modal-header-row">
-        <div class="modal-badge-info">게임 가이드</div>
+        <div class="modal-brand-row">
+          <img class="modal-brand-icon" src="icons/favicon-48x48.png" width="26" height="26" alt="노드라인 아이콘">
+          <div class="modal-badge-info">게임 가이드</div>
+          <span class="modal-version-badge font-mono">v1.0.0</span>
+        </div>
         <button id="btnCloseControlsGuideX" class="btn-icon-close" title="닫기 (ESC)" aria-label="닫기">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>

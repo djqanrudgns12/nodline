@@ -4,14 +4,17 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = __dirname;
+const APP_VERSION = '1.0.0';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
   '.js': 'application/javascript; charset=UTF-8',
   '.css': 'text/css; charset=UTF-8',
   '.json': 'application/json; charset=UTF-8',
+  '.webmanifest': 'application/manifest+json; charset=UTF-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.wav': 'audio/wav',
@@ -56,7 +59,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`================================================`);
-  console.log(`🚇 노드라인 (Nodeline) 웹 서버 실행 중!`);
+  console.log(`🚇 노드라인 (Nodeline) v${APP_VERSION} 웹 서버 실행 중!`);
   console.log(`🌐 URL: http://localhost:${PORT}`);
   console.log(`================================================`);
 });
