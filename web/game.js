@@ -243,6 +243,18 @@
       return false;
     },
 
+    pointToSegmentDist(p, a, b) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq < 1e-9) {
+        return { dist: Math.hypot(p.x - a.x, p.y - a.y), proj: { x: a.x, y: a.y } };
+      }
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq));
+      const proj = { x: a.x + t * dx, y: a.y + t * dy };
+      return { dist: Math.hypot(p.x - proj.x, p.y - proj.y), proj };
+    },
+
     segmentPolygonCenter(p1, p2, poly) {
       const hits = [];
       for (let i = 0; i < poly.length; i++) {
@@ -332,6 +344,7 @@
       this.showLastStationMarkers = false;
       this.showFirstStationMarkers = false;
       this.isDeleteMode = false;
+      this.hoveredDeleteSegment = null;
       this._renderedSlotCount = -1;
       this.canvasFontFamily = '"Pretendard", sans-serif';
       this.canvasMonoFontFamily = '"JetBrains Mono", monospace';
@@ -517,6 +530,7 @@
       this.showLastStationMarkers = false;
       this.showFirstStationMarkers = false;
       this.isDeleteMode = false;
+      this.hoveredDeleteSegment = null;
       const btnLast = document.getElementById('btnToolLastStation');
       if (btnLast) btnLast.classList.remove('active');
       const btnFirst = document.getElementById('btnToolFirstStation');
@@ -1315,7 +1329,7 @@
       if (!banner || !text) return;
 
       if (dot) dot.style.backgroundColor = '#C92A2A';
-      text.textContent = `역 삭제 모드 (${this.activeLineSlot}호선) — 노선에서 제거할 역 클릭 · 숫자 키 호선 변경 · X/ESC 종료`;
+      text.textContent = '노선 삭제 모드 — 삭제할 노선 구간을 클릭하세요 (중간 구간 클릭 시 종점 방향까지 일괄 삭제) · X/우클릭/ESC 종료';
       banner.classList.remove('hidden');
     }
 
@@ -1323,6 +1337,7 @@
       const next = Boolean(enabled);
       if (this.isDeleteMode === next) return;
       this.isDeleteMode = next;
+      this.hoveredDeleteSegment = null;
 
       const btnDel = document.getElementById('btnToolDeleteLine');
       const btnLine = document.getElementById('btnToolLine');
@@ -1333,10 +1348,11 @@
         if (this.connectingFromStation) {
           this.connectingFromStation = null;
         }
+        this.hoveredDeleteSegment = this.findLineSegmentAt(this.mouseWorldPos);
         this.showDeleteModeBanner();
         if (notify) {
           this.sfx.play('click');
-          this.showToast('역 삭제 모드 켜짐 — 제거할 역을 클릭하세요 (X/ESC로 종료)');
+          this.showToast('노선 삭제 모드 켜짐 — 없앨 노선 구간을 클릭하세요 (X/우클릭/ESC 종료)');
         }
       } else {
         const banner = document.getElementById('connectingBanner');
@@ -1345,7 +1361,7 @@
         }
         if (notify) {
           this.sfx.play('click');
-          this.showToast('역 삭제 모드 종료');
+          this.showToast('노선 삭제 모드 종료');
         }
       }
     }
@@ -1355,138 +1371,175 @@
     }
 
     /**
-     * 삭제 모드에서 클릭한 역 1개만 노선에서 제거 (중간 역이면 앞뒤 역 자동 직결)
+     * 평행 오프셋이 반영된 모든 노선 구간의 실제 렌더링 좌표 목록 반환
      */
-    removeStationFromLine(station) {
-      if (!station) return;
+    getRenderedLineSegments() {
+      const pairCounts = new Map();
+      const pairSeen = new Map();
+      const makePairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
-      const activeLine = this.getLineBySlot(this.activeLineSlot);
-      let targetLine = null;
+      for (const line of this.lines) {
+        for (const [u, v] of this.getLineSegments(line)) {
+          const key = makePairKey(u, v);
+          pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
+        }
+      }
 
-      if (activeLine && activeLine.stationIds.includes(station.id)) {
-        targetLine = activeLine;
+      const rendered = [];
+      for (const line of this.lines) {
+        const segs = this.getLineSegments(line);
+        for (let segIdx = 0; segIdx < segs.length; segIdx++) {
+          const [u, v] = segs[segIdx];
+          const stU = this.stations.find(s => s.id === u);
+          const stV = this.stations.find(s => s.id === v);
+          if (!stU || !stV) continue;
+
+          const key = makePairKey(u, v);
+          const total = pairCounts.get(key) || 1;
+          const idx = pairSeen.get(key) || 0;
+          pairSeen.set(key, idx + 1);
+
+          let ox = 0;
+          let oy = 0;
+          if (total > 1) {
+            const refA = u < v ? stU.position : stV.position;
+            const refB = u < v ? stV.position : stU.position;
+            const dx = refB.x - refA.x;
+            const dy = refB.y - refA.y;
+            const len = Math.max(1, Math.hypot(dx, dy));
+            const shift = (idx - (total - 1) * 0.5) * 6.5;
+            ox = (-dy / len) * shift;
+            oy = (dx / len) * shift;
+          }
+
+          rendered.push({
+            line,
+            segIdx,
+            u,
+            v,
+            stU,
+            stV,
+            ox,
+            oy,
+            p1: { x: stU.position.x + ox, y: stU.position.y + oy },
+            p2: { x: stV.position.x + ox, y: stV.position.y + oy }
+          });
+        }
+      }
+      return rendered;
+    }
+
+    /**
+     * 마우스 월드 좌표에서 가장 가까운 노선 구간 탐색
+     */
+    findLineSegmentAt(worldPos) {
+      if (!worldPos || this.lines.length === 0) return null;
+      const threshold = Math.max(12, 14 / Math.max(0.4, this.camera.zoom));
+      let best = null;
+      let bestDist = threshold;
+
+      for (const seg of this.getRenderedLineSegments()) {
+        const { dist, proj } = Geometry.pointToSegmentDist(worldPos, seg.p1, seg.p2);
+        if (dist <= bestDist) {
+          bestDist = dist;
+          best = { ...seg, dist, proj };
+        }
+      }
+      return best;
+    }
+
+    /**
+     * 특정 구간(segIdx)을 클릭했을 때 삭제될 구간·역·잔여 노선 계산
+     * - 종점으로 가는 마지막 구간이면 그 구간 1개만 삭제
+     * - 종점으로 가는 구간이 아니면 해당 구간부터 종점 방향의 앞 구간들까지 일괄 삭제
+     * - 순환선이면 클릭한 해당 구간 1개만 끊어 일반 노선으로 전환
+     */
+    computeSegmentDeletionPlan(line, segIdx) {
+      if (!line || !line.stationIds || line.stationIds.length < 2) return null;
+      const segs = this.getLineSegments(line);
+      if (segIdx < 0 || segIdx >= segs.length) return null;
+
+      const len = line.stationIds.length;
+
+      // 1. 순환선: 클릭한 구간 1개만 해제하여 연속된 일반 노선으로 변환
+      if (line.isCircular && len >= 3) {
+        const startIdx = (segIdx + 1) % len;
+        const remainingStationIds = [];
+        for (let i = 0; i < len; i++) {
+          remainingStationIds.push(line.stationIds[(startIdx + i) % len]);
+        }
+        return {
+          line,
+          segIdx,
+          opensLoop: true,
+          deletesWholeLine: false,
+          affectedSegIndices: [segIdx],
+          removedPairs: [segs[segIdx]],
+          remainingStationIds,
+          removedStationIds: [],
+          newLastConnectedStationId: remainingStationIds[remainingStationIds.length - 1]
+        };
+      }
+
+      // 2. 일반 노선: 종점 방향을 판정하여 클릭한 구간 ~ 종점까지 삭제
+      const terminusAtFront = line.lastConnectedStationId === line.stationIds[0];
+      let affectedSegIndices = [];
+      let remainingStationIds = [];
+      let removedStationIds = [];
+      let newLastConnectedStationId = null;
+
+      if (!terminusAtFront) {
+        // 시점(0) → 종점(len - 1): segIdx부터 len - 2까지 삭제
+        for (let i = segIdx; i < segs.length; i++) {
+          affectedSegIndices.push(i);
+        }
+        remainingStationIds = line.stationIds.slice(0, segIdx + 1);
+        removedStationIds = line.stationIds.slice(segIdx + 1);
+        newLastConnectedStationId = remainingStationIds.length > 0
+          ? remainingStationIds[remainingStationIds.length - 1]
+          : null;
       } else {
-        const passingLines = this.lines.filter(l => l.stationIds.includes(station.id));
-        if (passingLines.length === 0) {
-          this.showToast(`${station.name}에 연결된 노선이 없습니다.`);
-          this.sfx.play('warn');
-          return;
+        // 종점(0) ← 시점(len - 1): 0부터 segIdx까지 삭제
+        for (let i = 0; i <= segIdx; i++) {
+          affectedSegIndices.push(i);
         }
-        if (passingLines.length === 1) {
-          targetLine = passingLines[0];
-        } else {
-          const names = passingLines.map(l => l.name).join(', ');
-          this.showToast(`${station.name} 경유: ${names} — 숫자 키로 호선을 선택한 뒤 클릭하세요`);
-          this.sfx.play('warn');
-          return;
-        }
+        remainingStationIds = line.stationIds.slice(segIdx + 1);
+        removedStationIds = line.stationIds.slice(0, segIdx + 1);
+        newLastConnectedStationId = remainingStationIds.length > 0
+          ? remainingStationIds[0]
+          : null;
       }
 
-      const len = targetLine.stationIds.length;
-      const idx = targetLine.stationIds.indexOf(station.id);
-      if (idx === -1) return;
+      const deletesWholeLine = remainingStationIds.length < 2;
+      const removedPairs = affectedSegIndices.map(i => segs[i]);
 
-      // 역이 2개 이하인 노선에서 1개를 제거하면 노선 전체 철거
-      if (len <= 2) {
+      return {
+        line,
+        segIdx,
+        opensLoop: false,
+        deletesWholeLine,
+        affectedSegIndices,
+        removedPairs,
+        remainingStationIds,
+        removedStationIds: deletesWholeLine ? [...line.stationIds] : removedStationIds,
+        newLastConnectedStationId
+      };
+    }
+
+    /**
+     * 삭제 모드에서 클릭한 노선 구간 삭제 (종점 방향 앞 구간 포함)
+     */
+    deleteLineFromSegment(hit) {
+      if (!hit || !hit.line) return;
+      const plan = this.computeSegmentDeletionPlan(hit.line, hit.segIdx);
+      if (!plan) return;
+
+      const targetLine = plan.line;
+
+      // 남는 역이 2개 미만이면 노선 전체 철거
+      if (plan.deletesWholeLine) {
+        this.hoveredDeleteSegment = null;
         this.deleteLine(targetLine.slot);
-        return;
-      }
-
-      const matchesSegment = (item, idA, idB) =>
-        item.lineId === targetLine.id &&
-        ((item.segA === idA && item.segB === idB) || (item.segA === idB && item.segB === idA));
-
-      const isEndpointNonCircular = !targetLine.isCircular && (idx === 0 || idx === len - 1);
-
-      if (isEndpointNonCircular) {
-        const neighborId = idx === 0 ? targetLine.stationIds[1] : targetLine.stationIds[len - 2];
-
-        this.undoStack.push(this.captureNetworkSnapshot());
-        if (this.undoStack.length > 30) this.undoStack.shift();
-        this.redoStack = [];
-
-        targetLine.stationIds.splice(idx, 1);
-        station.connectedLineIds = station.connectedLineIds.filter(id => id !== targetLine.id);
-
-        if (targetLine.lastConnectedStationId === station.id) {
-          targetLine.lastConnectedStationId = neighborId;
-        }
-
-        for (const tr of this.trains) {
-          if (tr.lineId !== targetLine.id) continue;
-          if (idx === 0) {
-            tr.currentStationIndex = Math.max(0, tr.currentStationIndex - 1);
-            if (tr.currentStationIndex === 0 && tr.direction === -1) {
-              tr.direction = 1;
-              tr.progress = 0;
-            }
-          } else if (tr.currentStationIndex >= targetLine.stationIds.length - 1) {
-            tr.currentStationIndex = targetLine.stationIds.length - 1;
-            tr.direction = -1;
-            tr.progress = 0;
-          }
-        }
-
-        let refundedBridges = 0;
-        let refundedTunnels = 0;
-        this.bridges = this.bridges.filter(b => {
-          if (matchesSegment(b, station.id, neighborId)) {
-            refundedBridges++;
-            return false;
-          }
-          return true;
-        });
-        this.tunnels = this.tunnels.filter(t => {
-          if (matchesSegment(t, station.id, neighborId)) {
-            refundedTunnels++;
-            return false;
-          }
-          return true;
-        });
-        this.availableBridges += refundedBridges;
-        this.availableTunnels += refundedTunnels;
-
-        this.rebuildCrossings();
-        this.sfx.play('click');
-        this.updateHUD();
-        this.updateInspector();
-
-        const refundParts = [];
-        if (refundedBridges > 0) refundParts.push(`다리 +${refundedBridges}`);
-        if (refundedTunnels > 0) refundParts.push(`터널 +${refundedTunnels}`);
-        const refundText = refundParts.length > 0 ? ` (${refundParts.join(' · ')} 회수)` : '';
-        this.showToast(`${targetLine.name}에서 ${station.name} 제거${refundText}`);
-        this.logEvent(`${targetLine.name} 역 제거 — ${station.name}${refundText}`);
-        return;
-      }
-
-      // 중간 역 또는 순환선 역 제거: 앞뒤 역(prevId ↔ nextId)을 직접 연결
-      const prevId = targetLine.stationIds[(idx - 1 + len) % len];
-      const nextId = targetLine.stationIds[(idx + 1) % len];
-      const prevSt = this.stations.find(s => s.id === prevId);
-      const nextSt = this.stations.find(s => s.id === nextId);
-
-      // 기존 두 구간에서 회수될 다리/터널 계산
-      const refundBridgeCount = this.bridges.filter(
-        b => matchesSegment(b, prevId, station.id) || matchesSegment(b, station.id, nextId)
-      ).length;
-      const refundTunnelCount = this.tunnels.filter(
-        t => matchesSegment(t, prevId, station.id) || matchesSegment(t, station.id, nextId)
-      ).length;
-
-      // 새 직결 구간(prev ↔ next)에 필요한 다리/터널 검사
-      const bypassCheck = (prevSt && nextSt)
-        ? this.checkSegmentTerrain(prevSt.position, nextSt.position)
-        : { bridgeCount: 0, tunnelCount: 0, bridgePositions: [], tunnelPositions: [] };
-
-      if (this.availableBridges + refundBridgeCount < bypassCheck.bridgeCount) {
-        this.showToast(`우회 직결에 다리가 부족합니다 (필요 ${bypassCheck.bridgeCount})`);
-        this.sfx.play('warn');
-        return;
-      }
-      if (this.availableTunnels + refundTunnelCount < bypassCheck.tunnelCount) {
-        this.showToast(`우회 직결에 터널이 부족합니다 (필요 ${bypassCheck.tunnelCount})`);
-        this.sfx.play('warn');
         return;
       }
 
@@ -1494,81 +1547,109 @@
       if (this.undoStack.length > 30) this.undoStack.shift();
       this.redoStack = [];
 
-      // 기존 두 구간 인프라 제거 및 회수
-      this.bridges = this.bridges.filter(
-        b => !(matchesSegment(b, prevId, station.id) || matchesSegment(b, station.id, nextId))
+      const oldStationIds = [...targetLine.stationIds];
+      const wasCircular = targetLine.isCircular;
+      const removedPairSet = new Set(
+        plan.removedPairs.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`))
       );
-      this.tunnels = this.tunnels.filter(
-        t => !(matchesSegment(t, prevId, station.id) || matchesSegment(t, station.id, nextId))
-      );
-      this.availableBridges += refundBridgeCount;
-      this.availableTunnels += refundTunnelCount;
+      const matchesRemovedSegment = (item) => {
+        if (item.lineId !== targetLine.id) return false;
+        const key = item.segA < item.segB ? `${item.segA}|${item.segB}` : `${item.segB}|${item.segA}`;
+        return removedPairSet.has(key);
+      };
 
-      // 우회 직결 구간 인프라 배치
-      if (bypassCheck.bridgeCount > 0) {
-        this.availableBridges -= bypassCheck.bridgeCount;
-        for (const pos of bypassCheck.bridgePositions) {
-          this.bridges.push({
-            id: 'br_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            pos,
-            lineId: targetLine.id,
-            segA: prevId,
-            segB: nextId
-          });
+      // 삭제된 모든 구간의 다리·터널 회수
+      let refundedBridges = 0;
+      let refundedTunnels = 0;
+      this.bridges = this.bridges.filter(b => {
+        if (matchesRemovedSegment(b)) {
+          refundedBridges++;
+          return false;
+        }
+        return true;
+      });
+      this.tunnels = this.tunnels.filter(t => {
+        if (matchesRemovedSegment(t)) {
+          refundedTunnels++;
+          return false;
+        }
+        return true;
+      });
+      this.availableBridges += refundedBridges;
+      this.availableTunnels += refundedTunnels;
+
+      // 노선 상태 갱신
+      targetLine.stationIds = plan.remainingStationIds;
+      targetLine.isCircular = false;
+      targetLine.lastConnectedStationId = plan.newLastConnectedStationId;
+
+      // 분리된 역의 연결 노선 목록 정리
+      for (const stId of plan.removedStationIds) {
+        const st = this.stations.find(s => s.id === stId);
+        if (st) {
+          st.connectedLineIds = st.connectedLineIds.filter(id => id !== targetLine.id);
         }
       }
-      if (bypassCheck.tunnelCount > 0) {
-        this.availableTunnels -= bypassCheck.tunnelCount;
-        for (const pos of bypassCheck.tunnelPositions) {
-          this.tunnels.push({
-            id: 'tu_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            pos,
-            lineId: targetLine.id,
-            segA: prevId,
-            segB: nextId
-          });
-        }
-      }
 
-      // 노선에서 역 제거
-      targetLine.stationIds.splice(idx, 1);
-      station.connectedLineIds = station.connectedLineIds.filter(id => id !== targetLine.id);
-
-      if (targetLine.isCircular && targetLine.stationIds.length < 3) {
-        targetLine.isCircular = false;
-      }
-      if (targetLine.lastConnectedStationId === station.id) {
-        targetLine.lastConnectedStationId = prevId;
-      }
-
-      // 열차 인덱스 안전 보정
+      // 열차 위치 및 진행 방향 안전 보정
+      const newLen = targetLine.stationIds.length;
+      const fallbackIdx = Math.max(0, targetLine.stationIds.indexOf(targetLine.lastConnectedStationId));
       for (const tr of this.trains) {
         if (tr.lineId !== targetLine.id) continue;
-        if (tr.currentStationIndex > idx) {
-          tr.currentStationIndex -= 1;
-        }
-        if (tr.currentStationIndex >= targetLine.stationIds.length) {
-          tr.currentStationIndex = targetLine.stationIds.length - 1;
-        }
-        if (!targetLine.isCircular) {
-          if (tr.currentStationIndex >= targetLine.stationIds.length - 1 && tr.direction === 1) {
+        const oldIdx = Math.max(0, Math.min(tr.currentStationIndex, oldStationIds.length - 1));
+        const curStId = oldStationIds[oldIdx];
+        const nextOldIdx = wasCircular
+          ? (oldIdx + tr.direction + oldStationIds.length) % oldStationIds.length
+          : oldIdx + tr.direction;
+        const nextStId = (nextOldIdx >= 0 && nextOldIdx < oldStationIds.length)
+          ? oldStationIds[nextOldIdx]
+          : null;
+        const movingOnRemovedSeg = nextStId
+          ? removedPairSet.has(curStId < nextStId ? `${curStId}|${nextStId}` : `${nextStId}|${curStId}`)
+          : false;
+
+        const mappedIdx = targetLine.stationIds.indexOf(curStId);
+        if (mappedIdx !== -1) {
+          tr.currentStationIndex = mappedIdx;
+          if (movingOnRemovedSeg) {
+            tr.progress = 0;
+          }
+          if (tr.currentStationIndex >= newLen - 1 && tr.direction === 1) {
             tr.direction = -1;
             tr.progress = 0;
           } else if (tr.currentStationIndex <= 0 && tr.direction === -1) {
-            tr.currentStationIndex = 0;
             tr.direction = 1;
             tr.progress = 0;
           }
+        } else {
+          tr.currentStationIndex = fallbackIdx;
+          tr.progress = 0;
+          tr.direction = fallbackIdx >= newLen - 1 ? -1 : 1;
         }
       }
 
+      this.hoveredDeleteSegment = this.findLineSegmentAt(this.mouseWorldPos);
       this.rebuildCrossings();
       this.sfx.play('click');
       this.updateHUD();
       this.updateInspector();
 
-      this.showToast(`${targetLine.name}에서 ${station.name} 제거 (앞뒤 역 직결)`);
-      this.logEvent(`${targetLine.name} 역 제거 — ${station.name}`);
+      const refundParts = [];
+      if (refundedBridges > 0) refundParts.push(`다리 +${refundedBridges}`);
+      if (refundedTunnels > 0) refundParts.push(`터널 +${refundedTunnels}`);
+      const refundText = refundParts.length > 0 ? ` (${refundParts.join(' · ')} 회수)` : '';
+
+      let desc;
+      if (plan.opensLoop) {
+        desc = `${targetLine.name} 순환 구간 해제`;
+      } else if (plan.affectedSegIndices.length === 1) {
+        desc = `${targetLine.name} 종점 구간 삭제`;
+      } else {
+        desc = `${targetLine.name} 구간 ${plan.affectedSegIndices.length}개 일괄 삭제 (종점 방향 포함)`;
+      }
+
+      this.showToast(`${desc}${refundText} · U로 복구`);
+      this.logEvent(`${desc}${refundText}`);
     }
 
     spawnTrainOnLine(line, consumeInventory = true, startOffset = false) {
@@ -2645,52 +2726,13 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      // 두 개 이상의 노선이 같은 역 구간을 공유할 때 평행 오프셋 부여
-      const pairCounts = new Map();
-      const pairSeen = new Map();
-      const makePairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
-
-      for (const line of this.lines) {
-        for (const [u, v] of this.getLineSegments(line)) {
-          const key = makePairKey(u, v);
-          pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
-        }
-      }
-
-      for (const line of this.lines) {
-        const segs = this.getLineSegments(line);
-        if (segs.length === 0) continue;
-
-        ctx.strokeStyle = line.color;
+      for (const seg of this.getRenderedLineSegments()) {
+        ctx.strokeStyle = seg.line.color;
         ctx.lineWidth = 6;
-
-        for (const [u, v] of segs) {
-          const stU = this.stations.find(s => s.id === u);
-          const stV = this.stations.find(s => s.id === v);
-          if (!stU || !stV) continue;
-
-          const key = makePairKey(u, v);
-          const total = pairCounts.get(key) || 1;
-          const idx = pairSeen.get(key) || 0;
-          pairSeen.set(key, idx + 1);
-
-          let ox = 0, oy = 0;
-          if (total > 1) {
-            const refA = u < v ? stU.position : stV.position;
-            const refB = u < v ? stV.position : stU.position;
-            const dx = refB.x - refA.x;
-            const dy = refB.y - refA.y;
-            const len = Math.max(1, Math.hypot(dx, dy));
-            const shift = (idx - (total - 1) * 0.5) * 6.5;
-            ox = (-dy / len) * shift;
-            oy = (dx / len) * shift;
-          }
-
-          ctx.beginPath();
-          ctx.moveTo(stU.position.x + ox, stU.position.y + oy);
-          ctx.lineTo(stV.position.x + ox, stV.position.y + oy);
-          ctx.stroke();
-        }
+        ctx.beginPath();
+        ctx.moveTo(seg.p1.x, seg.p1.y);
+        ctx.lineTo(seg.p2.x, seg.p2.y);
+        ctx.stroke();
       }
 
       // 다리 마커
@@ -2727,23 +2769,93 @@
     }
 
     renderConnectionPreview(ctx) {
-      if (this.isDeleteMode && this.hoveredStation) {
-        const pos = this.hoveredStation.position;
-        const r = CONFIG.station.radius + 9;
-        ctx.save();
-        ctx.strokeStyle = '#C92A2A';
-        ctx.lineWidth = 2.6;
-        ctx.setLineDash([5, 4]);
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
+      if (this.isDeleteMode && this.hoveredDeleteSegment) {
+        const hit = this.hoveredDeleteSegment;
+        const liveLine = this.lines.find(l => l.id === hit.line.id);
+        if (!liveLine) {
+          this.hoveredDeleteSegment = null;
+          return;
+        }
+        const plan = this.computeSegmentDeletionPlan(liveLine, hit.segIdx);
+        if (plan) {
+          const affectedSet = new Set(plan.affectedSegIndices);
+          const allSegs = this.getRenderedLineSegments().filter(
+            s => s.line.id === hit.line.id && affectedSet.has(s.segIdx)
+          );
 
-        ctx.font = `700 11.5px ${this.canvasFontFamily}`;
-        ctx.fillStyle = '#C92A2A';
-        ctx.textAlign = 'center';
-        ctx.fillText(`클릭하여 ${this.hoveredStation.name} 제거`, pos.x, pos.y - r - 8);
-        ctx.restore();
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          // 삭제 예정 구간 붉은 글로우 + 점선 강조
+          for (const s of allSegs) {
+            ctx.strokeStyle = 'rgba(220, 38, 38, 0.28)';
+            ctx.lineWidth = 14;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(s.p1.x, s.p1.y);
+            ctx.lineTo(s.p2.x, s.p2.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#DC2626';
+            ctx.lineWidth = 6.5;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.moveTo(s.p1.x, s.p1.y);
+            ctx.lineTo(s.p2.x, s.p2.y);
+            ctx.stroke();
+          }
+
+          // 분리될 역들 강조 링
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = 'rgba(220, 38, 38, 0.85)';
+          ctx.lineWidth = 2.4;
+          for (const stId of plan.removedStationIds) {
+            const st = this.stations.find(item => item.id === stId);
+            if (!st) continue;
+            ctx.beginPath();
+            ctx.arc(st.position.x, st.position.y, CONFIG.station.radius + 7, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+
+          // 삭제 안내 툴팁 (커서/투영점 상단)
+          let label;
+          if (plan.deletesWholeLine) {
+            label = `클릭: ${hit.line.name} 전체 철거`;
+          } else if (plan.opensLoop) {
+            label = `클릭: ${hit.line.name} 이 구간 해제 (순환 해제)`;
+          } else if (plan.affectedSegIndices.length === 1) {
+            label = `클릭: ${hit.line.name} 끝 구간 삭제`;
+          } else {
+            label = `클릭: ${hit.line.name} 구간 ${plan.affectedSegIndices.length}개 삭제 (종점까지)`;
+          }
+
+          const tipPos = hit.proj || this.mouseWorldPos;
+          ctx.font = `700 11.5px ${this.canvasFontFamily}`;
+          const tw = ctx.measureText(label).width;
+          const bw = tw + 16;
+          const bh = 22;
+          const bx = tipPos.x - bw * 0.5;
+          const by = tipPos.y - 34;
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+          ctx.strokeStyle = '#DC2626';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(bx, by, bw, bh, 6);
+          } else {
+            ctx.rect(bx, by, bw, bh);
+          }
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#B91C1C';
+          ctx.textAlign = 'center';
+          ctx.fillText(label, tipPos.x, by + 15);
+          ctx.restore();
+        }
         return;
       }
 
@@ -3271,8 +3383,9 @@
           const clickedStation = this.findStationAt(worldPos);
 
           if (this.isDeleteMode) {
-            if (clickedStation) {
-              this.removeStationFromLine(clickedStation);
+            const clickedSeg = this.findLineSegmentAt(worldPos);
+            if (clickedSeg) {
+              this.deleteLineFromSegment(clickedSeg);
             } else {
               this.isDraggingCamera = true;
               this.dragStartPos = { x: e.clientX, y: e.clientY };
@@ -3329,6 +3442,12 @@
         this.hoveredStation = this.findStationAt(this.mouseWorldPos);
         if (prevHovered !== this.hoveredStation) {
           this.updateInspector();
+        }
+
+        if (this.isDeleteMode) {
+          this.hoveredDeleteSegment = this.findLineSegmentAt(this.mouseWorldPos);
+        } else if (this.hoveredDeleteSegment) {
+          this.hoveredDeleteSegment = null;
         }
       });
 
